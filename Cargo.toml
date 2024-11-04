@@ -1,0 +1,48 @@
+[workspace]
+resolver = "2"
+members = ["contracts/*", "packages/*"]
+
+[workspace.package]
+version = "0.2.0"
+authors = ["Oraichain Labs"]
+edition = "2021"
+rust-version = "1.71.0"
+license = "MIT"
+repository = ""
+homepage = "https://orai.io"
+documentation = ""
+keywords = ["cosmwasm"]
+exclude = [
+    # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+    "contract.wasm",
+    "hash.txt",
+]
+
+[workspace.dependencies]
+cosmwasm-std = { version = "1.5" }
+cosmwasm-schema = { version = "1.5" }
+cosmwasm-storage = { version = "1.5" }
+cosmwasm-vm = { version = "1.5" }
+cosmos-sdk-proto = { version = "0.19", default-features = false }
+osmosis-std = "0.22.0"
+
+thiserror = "1.0.26"
+
+cw-utils = { version = "1.0.3" }
+cw2 = { version = "1.0.1" }
+cw20 = { version = "1.0.1" }
+cw20-base = { version = "1.0.1" }
+cw-storage-plus = { version = "1.0.1" }
+derive_more = "0.99.17"
+zapper = { version = "0.2.0", path = "./packages/zapper" }
+cw-controllers = "1.0.1"
+
+[profile.release]
+codegen-units = 1
+debug = false
+debug-assertions = false
+incremental = false
+lto = true
+opt-level = 3
+overflow-checks = true
+rpath = false
