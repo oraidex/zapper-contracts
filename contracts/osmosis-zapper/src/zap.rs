@@ -126,7 +126,7 @@ pub fn zap_in_liquidity(
             token_1,
         },
     )?;
-    Ok(Response::default())
+    Ok(Response::new().add_messages(msgs))
 }
 
 pub fn create_position(
@@ -189,6 +189,7 @@ pub fn create_position(
     )
 }
 
+// Ensure this position transfer to contract first
 pub fn zap_out_liquidity(
     deps: DepsMut,
     env: Env,
