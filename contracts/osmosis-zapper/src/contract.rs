@@ -1,5 +1,6 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
+use cw20::{Cw20Coin, Cw20ReceiveMsg};
 use zapper::{
     asset::{get_current_asset_available, Asset},
     error::ZapperError,
@@ -7,15 +8,15 @@ use zapper::{
 
 use crate::{
     error::{ContractError, ContractResult},
-    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
+    msg::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     reply::{reply_create_position, reply_withdraw_position},
     state::{ProtocolFee, OWNER, PROTOCOL_FEE, SNAP_BALANCES},
     zap::{create_position, zap_in_liquidity, zap_out_liquidity},
 };
 
 use cosmwasm_std::{
-    to_json_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Order, Reply,
-    Response, StdResult,
+    from_json, to_json_binary, Addr, Binary, CosmosMsg, Decimal, Deps, DepsMut, Env, MessageInfo,
+    Order, Reply, Response, StdResult,
 };
 use cw2::set_contract_version;
 
@@ -46,6 +47,7 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> ContractResult<Response> {
     match msg {
+        ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
         ExecuteMsg::ChangeOwner { new_owner } => execute_change_owner(deps, info, new_owner),
         ExecuteMsg::ZapInLiquidity {
             pool_id,
@@ -55,7 +57,6 @@ pub fn execute(
             upper_tick,
             token_min_amount_0,
             token_min_amount_1,
-            asset_in,
             routes,
         } => zap_in_liquidity(
             deps,
@@ -68,7 +69,7 @@ pub fn execute(
             upper_tick,
             token_min_amount_0,
             token_min_amount_1,
-            asset_in,
+            None,
             routes,
         ),
         ExecuteMsg::CreatePosition {
@@ -97,11 +98,58 @@ pub fn execute(
         } => zap_out_liquidity(deps, env, info, position_id, routes),
         ExecuteMsg::TransferFundsBack { receiver } => {
             execute_transfer_funds_back(deps, env, info, receiver)
-        } // ExecuteMsg::RegisterProtocolFee {
-          //     percent,
-          //     fee_receiver,
-          // } => execute_register_protocol_fee(deps, info, percent, fee_receiver),
-          // ExecuteMsg::Withdraw { assets, recipient } => withdraw(deps, info, assets, recipient),
+        }
+        ExecuteMsg::RegisterProtocolFee {
+            percent,
+            fee_receiver,
+        } => execute_register_protocol_fee(deps, info, percent, fee_receiver),
+        ExecuteMsg::Withdraw { assets, recipient } => {
+            execute_withdraw(deps, info, assets, recipient)
+        }
+    }
+}
+
+//////////////////////////
+/// RECEIVE ENTRYPOINT ///
+//////////////////////////
+
+// Receive is the main entry point for the contract to
+// receive cw20 tokens and execute the swap and action message
+fn receive_cw20(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    cw20_msg: Cw20ReceiveMsg,
+) -> ContractResult<Response> {
+    let sent_asset = Asset::Cw20(Cw20Coin {
+        address: info.sender.to_string(),
+        amount: cw20_msg.amount,
+    });
+
+    match from_json(&cw20_msg.msg)? {
+        Cw20HookMsg::ZapInLiquidity {
+            pool_id,
+            token_0,
+            token_1,
+            lower_tick,
+            upper_tick,
+            token_min_amount_0,
+            token_min_amount_1,
+            routes,
+        } => zap_in_liquidity(
+            deps,
+            env,
+            info,
+            pool_id,
+            token_0,
+            token_1,
+            lower_tick,
+            upper_tick,
+            token_min_amount_0,
+            token_min_amount_1,
+            Some(sent_asset),
+            routes,
+        ),
     }
 }
 
@@ -111,6 +159,53 @@ fn execute_change_owner(
     new_owner: Addr,
 ) -> ContractResult<Response> {
     Ok(OWNER.execute_update_admin(deps, info, Some(new_owner))?)
+}
+
+pub fn execute_register_protocol_fee(
+    deps: DepsMut,
+    info: MessageInfo,
+    percent: Decimal,
+    fee_receiver: Addr,
+) -> Result<Response, ContractError> {
+    OWNER.assert_admin(deps.as_ref(), &info.sender)?;
+
+    // validate percent must be < 1
+    if percent.gt(&Decimal::one()) {
+        return Err(ContractError::Zapper(ZapperError::InvalidFee {}));
+    }
+
+    PROTOCOL_FEE.save(
+        deps.storage,
+        &ProtocolFee {
+            percent,
+            fee_receiver: fee_receiver.clone(),
+        },
+    )?;
+
+    Ok(Response::new().add_attributes(vec![
+        ("action", "register_protocol_fee"),
+        ("percent", &percent.to_string()),
+        ("fee_receiver", fee_receiver.as_str()),
+    ]))
+}
+
+pub fn execute_withdraw(
+    deps: DepsMut,
+    info: MessageInfo,
+    assets: Vec<Asset>,
+    recipient: Option<Addr>,
+) -> Result<Response, ContractError> {
+    OWNER.assert_admin(deps.as_ref(), &info.sender)?;
+    let receiver = recipient.unwrap_or_else(|| info.sender.clone());
+
+    let mut msgs: Vec<CosmosMsg> = vec![];
+    for asset in assets {
+        msgs.push(asset.transfer(receiver.as_str()))
+    }
+
+    Ok(Response::new()
+        .add_attribute("action", "withdraw")
+        .add_messages(msgs))
 }
 
 fn execute_transfer_funds_back(

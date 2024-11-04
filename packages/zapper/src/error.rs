@@ -60,4 +60,7 @@ pub enum ZapperError {
 
     #[error("Error on zap out: not enough balance to swap")]
     ZapOutNotEnoughBalanceToSwap {},
+
+    #[error("invalid fee")]
+    InvalidFee,
 }
