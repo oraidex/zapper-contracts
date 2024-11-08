@@ -126,9 +126,9 @@ pub fn reply_withdraw_position(deps: DepsMut, env: Env, msg: Reply) -> ContractR
             msgs.push(
                 wasm_execute(
                     env.contract.address.to_string(),
-                    &to_json_binary(&ExecuteMsg::TransferFundsBack {
+                    &ExecuteMsg::TransferFundsBack {
                         receiver: pending_zap_out.receiver,
-                    })?,
+                    },
                     vec![],
                 )?
                 .into(),

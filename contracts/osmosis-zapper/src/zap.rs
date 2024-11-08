@@ -33,8 +33,8 @@ pub fn zap_in_liquidity(
     pool_id: u64,
     token_0: String,
     token_1: String,
-    lower_tick: u64,
-    upper_tick: u64,
+    lower_tick: i64,
+    upper_tick: i64,
     token_min_amount_0: Option<Uint128>,
     token_min_amount_1: Option<Uint128>,
     asset_in: Option<Asset>,
@@ -102,7 +102,7 @@ pub fn zap_in_liquidity(
     msgs.push(
         wasm_execute(
             env.contract.address.to_string(),
-            &to_json_binary(&ExecuteMsg::CreatePosition {
+            &ExecuteMsg::CreatePosition {
                 pool_id,
                 token_0: token_0.clone(),
                 token_1: token_1.clone(),
@@ -110,7 +110,7 @@ pub fn zap_in_liquidity(
                 upper_tick,
                 token_min_amount_0,
                 token_min_amount_1,
-            })?,
+            },
             vec![],
         )?
         .into(),
@@ -136,8 +136,8 @@ pub fn create_position(
     pool_id: u64,
     token_0: String,
     token_1: String,
-    lower_tick: u64,
-    upper_tick: u64,
+    lower_tick: i64,
+    upper_tick: i64,
     token_min_amount_0: Option<Uint128>,
     token_min_amount_1: Option<Uint128>,
 ) -> ContractResult<Response> {
@@ -175,8 +175,8 @@ pub fn create_position(
     let msg_create_pos: CosmosMsg = MsgCreatePosition {
         pool_id,
         sender: env.contract.address.to_string(),
-        lower_tick: lower_tick as i64,
-        upper_tick: upper_tick as i64,
+        lower_tick,
+        upper_tick,
         tokens_provided,
         token_min_amount0: token_min_amount_0.unwrap_or_default().to_string(),
         token_min_amount1: token_min_amount_1.unwrap_or_default().to_string(),

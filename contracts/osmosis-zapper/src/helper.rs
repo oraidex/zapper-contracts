@@ -33,7 +33,7 @@ pub fn create_osmosis_swap_msg(
         sender,
         routes: osmosis_swap_amount_in_routes,
         token_in: Some(ProtoCoin(coin_in).into()),
-        token_out_min_amount: minimum_receive.unwrap_or_default().to_string(),
+        token_out_min_amount: minimum_receive.unwrap_or(Uint128::one()).to_string(),
     }
     .into();
 
