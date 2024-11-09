@@ -21,7 +21,6 @@ exclude = [
 [workspace.dependencies]
 cosmwasm-std = { version = "1.5" }
 cosmwasm-schema = { version = "1.5" }
-cosmwasm-storage = { version = "1.5" }
 cosmwasm-vm = { version = "1.5" }
 cosmos-sdk-proto = { version = "0.19", default-features = false }
 osmosis-std = "0.22.0"

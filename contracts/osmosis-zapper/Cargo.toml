@@ -21,7 +21,6 @@ test-tube = []
 [dependencies]
 cosmwasm-std = { workspace = true }
 cosmwasm-schema = { workspace = true }
-cosmwasm-storage = { workspace = true }
 osmosis-std = { workspace = true }
 zapper = { workspace = true }
 thiserror = { workspace = true }

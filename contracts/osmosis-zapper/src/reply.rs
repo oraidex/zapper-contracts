@@ -1,6 +1,5 @@
 use cosmwasm_std::{
-    coin, to_json_binary, wasm_execute, CosmosMsg, Decimal, DepsMut, Env, Order, Reply, Response,
-    SubMsgResult,
+    coin, wasm_execute, CosmosMsg, Decimal, DepsMut, Env, Order, Reply, Response, SubMsgResult,
 };
 use osmosis_std::types::osmosis::concentratedliquidity::v1beta1::{
     MsgCreatePositionResponse, MsgTransferPositions,

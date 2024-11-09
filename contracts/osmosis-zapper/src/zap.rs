@@ -1,6 +1,7 @@
+use std::str::FromStr;
+
 use cosmwasm_std::{
-    coin, to_json_binary, wasm_execute, CosmosMsg, DepsMut, Env, MessageInfo, Response, SubMsg,
-    Uint128,
+    coin, wasm_execute, CosmosMsg, Decimal256, DepsMut, Env, MessageInfo, Response, SubMsg, Uint128,
 };
 use cw_utils::one_coin;
 use osmosis_std::types::{
@@ -242,12 +243,19 @@ pub fn zap_out_liquidity(
         },
     )?;
 
+    // scale 1e18
+    let liquidity_amount = (Decimal256::from_str(&position.liquidity)?
+        * Decimal256::from_str("1000000000000000000")?)
+    .to_string();
+
+    let withdraw_position_msg = MsgWithdrawPosition {
+        position_id,
+        sender: env.contract.address.to_string(),
+        liquidity_amount,
+    };
+
     Ok(Response::new().add_submessage(SubMsg::reply_on_success(
-        MsgWithdrawPosition {
-            position_id,
-            sender: env.contract.address.to_string(),
-            liquidity_amount: position.liquidity,
-        },
+        withdraw_position_msg,
         WITHDRAW_POSITION_ID,
     )))
 }
